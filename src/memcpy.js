@@ -45,6 +45,12 @@
     var k = null;
 
     /**
+     * @type {?Uint32Array}
+     * @inner
+     */
+    var k32 = null;
+
+    /**
      * @type {?Uint8Array}
      * @inner
      */
@@ -55,6 +61,18 @@
      * @inner
      */
     var len = 0;
+
+    /**
+     * @type {number}
+     * @inner
+     */
+    var alignedStart = 0;
+
+    /**
+     * @type {number}
+     * @inner
+     */
+    var alignedEnd = 0;
 
     /**
      * Copies data between Buffers and/or ArrayBuffers in a uniform way.
@@ -110,10 +128,22 @@
                 if (targetStart+len > target.byteLength) {
                     throw(new Error("Buffer overrun"));
                 }
-                for (i=sourceStart, j=targetStart,
-                     k=target instanceof Uint8Array ? target : new Uint8Array(target);
-                    i<sourceEnd; ++i, ++j) k[j] = source[i];
-                k = null;
+                k=target instanceof Uint8Array ? target : new Uint8Array(target);
+                i=sourceStart; j=targetStart;
+                if(len>>2 > 1){
+                    alignedStart = sourceStart%4?((sourceStart>>2)+1)<<2:sourceStart;
+                    for (;
+                         i<alignedStart; ++i, ++j) k[j] = source[i];
+                    alignedEnd = (sourceEnd>>2)<<2;
+                    k32 = new Uint32Array(k.buffer,alignedStart,(alignedEnd-alignedStart)>>2);
+                    for (;i<alignedEnd;i+=4,j+=4)
+                         k32[i>>2] = ((source[j]) |
+                             (source[j + 1] << 8) |
+                             (source[j + 2] << 16)) +
+                             (source[j + 3] * 0x1000000);
+                }
+                for (;i<sourceEnd; ++i, ++j) k[j] = source[i];
+                k = k32 =null;
 
             // ArrayBuffer|Uint8Array source -> ArrayBuffer|Uint8Array target (the binding is up to about 75 times faster)
             } else {
@@ -122,9 +152,12 @@
                 if (targetStart+len > target.byteLength) {
                     throw(new Error("Buffer overrun"));
                 }
-                for (i=sourceStart, j=targetStart,
-                     k=target instanceof Uint8Array ? target : new Uint8Array(target),
-                     l=source instanceof Uint8Array ? source : new Uint8Array(source);
+                k=target instanceof Uint8Array ? target : new Uint8Array(target);
+                l=source instanceof Uint8Array ? source : new Uint8Array(source);
+                if(k.set)
+                    k.set(l.subarray(sourceStart,sourceEnd),targetStart);
+                else
+                for (i=sourceStart, j=targetStart;
                     i<sourceEnd; ++i, ++j) k[j] = l[i];
                 k = l = null;
             }
