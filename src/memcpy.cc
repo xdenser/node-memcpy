@@ -112,11 +112,11 @@ NAN_METHOD(memcpy){
         len
     );
 
-    NanReturnValue(NanNew<Number>(len));
+    NanReturnValue(NanNewLocal<Number>(Number::New(len)));
 }
 
 void init(Handle<Object> exports) {
-    exports->Set(NanNew<String>("memcpy"), NanNew<FunctionTemplate>(memcpy)->GetFunction());
+    exports->Set(NanNewLocal<String>(String::NewSymbol("memcpy")), NanNewLocal<FunctionTemplate>(FunctionTemplate::New(memcpy))->GetFunction());
 }
 
 NODE_MODULE(memcpy, init);
